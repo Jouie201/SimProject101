@@ -1,1 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tank Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            display: none; 
+            border: 1px solid black;
+        }
+        #startScreen {
+            text-align: center;
+        }
+        #startButton {
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: green; 
+            color: white; 
+            border: none; /* Remove border */
+            border-radius: 5px; /* Add rounded corners */
+            transition: background-color 0.3s; /* Smooth transition for hover effect */
+        }
+        #startButton:hover {
+            background-color: darkgreen; /* Darker green on hover */
+        }
+        #copyright {
+            position: absolute;
+            bottom: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>Welcome to the Tank Game!</h1>
+        <button id="startButton">Click to Start</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="copyright">© 2024 @JoeEmbuds. All rights reserved.</div> <!-- Copyright Notice -->
 
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let player = {
+            x: canvas.width / 2 - 50,
+            y: canvas.height - 120,
+            width: 100,
+            height: 100,
+            speed: 30,
+            image: new Image()
+        };
+
+        player.image.src = 'tank.jpg'; // Ensure this image path is correct
+
+        let bullets = [];
+        let bulletSpeed = 3;
+        let enemies = [];
+        let enemySpeed = 1;
+        let score = 0;
+        let gameOver = false;
+
+        class Enemy {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 50;
+                this.height = 50;
+                this.image = new Image();
+                this.image.src = 'enemy1.png'; // Ensure this image path is correct
+            }
+
+            update() {
+                this.y += enemySpeed; // Move the enemy down
+            }
+
+            draw() {
+                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            }
+        }
+
+        function drawPlayer() {
+            ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = 'red';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                enemy.draw();
+            });
+        }
+
+        function drawScore() {
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 20); // Display score at the top left
+        }
+
+        function updateBullets() {
+            bullets.forEach((bullet, bulletIndex) => {
+                bullet.y -= bulletSpeed;
+                if (bullet.y < 0) {
+                    bullets.splice(bulletIndex, 1); // Remove bullet if it goes off screen
+                }
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, enemyIndex) => {
+                enemy.update();
+                if (enemy.y > canvas.height) {
+                    gameOver = true; // Set game over if enemy goes off screen
+                }
+            });
+        }
+
+        function checkCollisions() {
+            bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        bullets.splice(bulletIndex, 1); // Remove bullet on hit
+                        enemies.splice(enemyIndex, 1); // Remove enemy on hit
+                        score++; // Increase score
+                    }
+                });
+            });
+        }
+
+        function spawnEnemies() {
+            if (Math.random() < 0.01) { // Adjusted spawn rate for less frequent enemy spawning
+                const x = Math.random() * (canvas.width - 50); // Random x position
+                enemies.push(new Enemy(x, 0)); // Spawn enemy at the top
+            }
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = 'black';
+            ctx.font = '40px Arial';
+            ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2 - 20);
+            ctx.font = '20px Arial';
+            ctx.fillText(`Final Score: ${score}`, canvas.width / 2 - 70, canvas.height / 2 + 20);
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+            drawScore(); // Call to draw the score
+            updateBullets();
+            updateEnemies();
+            checkCollisions();
+            spawnEnemies(); // Call spawn function
+
+            if (gameOver) {
+                drawGameOver();
+            } else {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            document.getElementById('startScreen').style.display = 'none';
+            canvas.style.display = 'block';
+            gameLoop();
+        });
+
+        // Player movement and bullet firing
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft' && player.x > 0) {
+                player.x -= player.speed; // Move left
+            } else if (event.key === 'ArrowRight' && player.x < canvas.width - player.width) {
+                player.x += player.speed; // Move right
+            } else if (event.key === ' ') { // Spacebar for firing
+                bullets.push({
+                    x: player.x + player.width / 2 - 2.5, // Center bullet
+                    y: player.y,
+                    width: 5,
+                    height: 20
+                });
+            }
+        });
+    </script>
+</body>
+</html>
